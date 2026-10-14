@@ -167,9 +167,11 @@ if os.environ.get('DJANGO_CACHE_DIR'):
 # enviando X-Forwarded-Proto.
 if not DEBUG:
     SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+    # DJANGO_SSL_REDIRECT=0 permite servir por http (p. ej. solo con IP, sin certificado);
+    # en ese caso las cookies tampoco pueden ser "secure" o el login del admin no funciona.
     SECURE_SSL_REDIRECT = env_bool('DJANGO_SSL_REDIRECT', True)
-    SESSION_COOKIE_SECURE = True
-    CSRF_COOKIE_SECURE = True
+    SESSION_COOKIE_SECURE = SECURE_SSL_REDIRECT
+    CSRF_COOKIE_SECURE = SECURE_SSL_REDIRECT
     SECURE_HSTS_SECONDS = int(os.environ.get('DJANGO_HSTS_SECONDS', 0))
     SECURE_HSTS_INCLUDE_SUBDOMAINS = SECURE_HSTS_SECONDS > 0
     SECURE_CONTENT_TYPE_NOSNIFF = True
