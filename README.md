@@ -151,6 +151,41 @@ Verificación: `curl https://api.midominio.com/api/v1/noticias/`, `systemctl sta
 
 Para actualizar: copiar el código, `pip install -r requirements.txt`, `migrate`, `collectstatic` y `sudo systemctl reload scrapcfna`.
 
+## Despliegue sin systemd (contenedor Docker / QNAP)
+
+Si el Debian es un contenedor sin systemd ni nginx, `deploy/run.sh` levanta gunicorn directo en un puerto (por defecto 8002, tiene que estar publicado por el contenedor) y un loop que scrapea cada hora. Los estáticos del admin los sirve `whitenoise`.
+
+```bash
+git clone https://github.com/nahuelcacer/scrapcfna.git ~/scrapcfna && cd ~/scrapcfna
+python3 -m venv venv && venv/bin/pip install -r requirements.txt
+```
+
+Crear `~/scrapcfna/.env` (Django lo lee solo) con este contenido, reemplazando la clave y la IP:
+
+```
+DJANGO_SECRET_KEY=<generar con: python3 -c "import secrets; print(secrets.token_urlsafe(50))">
+DJANGO_ALLOWED_HOSTS=192.168.1.79
+DJANGO_CSRF_TRUSTED_ORIGINS=http://192.168.1.79:8002
+DJANGO_SSL_REDIRECT=0
+DJANGO_CACHE_DIR=/home/nahuel/scrapcfna/cache
+```
+
+```bash
+chmod 600 .env
+venv/bin/python manage.py migrate
+venv/bin/python manage.py collectstatic --noinput
+venv/bin/python manage.py createsuperuser
+
+chmod +x deploy/run.sh
+deploy/run.sh start      # también: stop | restart | status
+```
+
+Logs en `logs/` (`access.log`, `error.log`, `scrape.log`). Variables opcionales de `run.sh`: `PORT`, `WORKERS`, `SCRAPE_INTERVAL` (segundos, default 3600) y `SCRAPE_PAGES`.
+
+Como el contenedor no tiene init, los procesos **no se reinician solos** si el contenedor se reinicia: hay que volver a correr `deploy/run.sh start`.
+
+Para actualizar: `git pull && venv/bin/pip install -r requirements.txt && venv/bin/python manage.py migrate && venv/bin/python manage.py collectstatic --noinput && deploy/run.sh restart`.
+
 ## Configuración
 
 - `CFNA_NOTICIAS_URL` en `config/settings.py`: URL base a scrapear.
