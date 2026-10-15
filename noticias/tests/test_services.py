@@ -4,8 +4,7 @@ from unittest.mock import patch
 import requests
 from django.test import TestCase
 
-from noticias.models import Noticia
-from noticias.services import guardar_noticias, parse_articulos, parse_fecha
+from noticias.services import parse_articulos, parse_fecha
 
 HTML = """
 <article id="post-10685" class="et_pb_post post-10685">
@@ -32,26 +31,17 @@ class ParseTests(TestCase):
         self.assertEqual(item["fecha"], date(2026, 1, 6))
 
 
-class GuardarTests(TestCase):
-    def test_guardar_es_idempotente(self):
-        items = parse_articulos(HTML)
-        self.assertEqual(guardar_noticias(items), (1, 0))
-        self.assertEqual(guardar_noticias(items), (0, 1))
-        self.assertEqual(Noticia.objects.count(), 1)
-
-
-class JsonTests(TestCase):
-    @patch("noticias.pagina.fetch_pagina", side_effect=lambda n: parse_articulos(HTML))
-    def test_json_devuelve_noticias(self, _):
-        data = self.client.get("/noticias.json").json()
-        self.assertTrue(data["actualizado"])
+class ApiTests(TestCase):
+    @patch("noticias.views.fetch_pagina", side_effect=lambda n: parse_articulos(HTML))
+    def test_devuelve_noticias_en_json(self, fetch):
+        response = self.client.get("/api/v1/noticias/")
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
         self.assertEqual(data["count"], 1)
-        self.assertEqual(data["results"][0]["titulo"], "FORO PLA")
+        self.assertEqual(data["results"][0]["id"], 10685)
         self.assertEqual(data["results"][0]["fecha"], "2026-01-06")
+        fetch.assert_called_once_with(1)
 
-    @patch("noticias.pagina.fetch_pagina", side_effect=requests.ConnectionError())
-    def test_json_usa_guardadas_si_falla(self, _):
-        guardar_noticias(parse_articulos(HTML))
-        data = self.client.get("/noticias.json").json()
-        self.assertFalse(data["actualizado"])
-        self.assertEqual(data["count"], 1)
+    @patch("noticias.views.fetch_pagina", side_effect=requests.ConnectionError())
+    def test_502_si_falla_el_scraping(self, _):
+        self.assertEqual(self.client.get("/api/v1/noticias/").status_code, 502)

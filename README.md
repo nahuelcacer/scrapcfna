@@ -1,6 +1,6 @@
 # scrapcfna
 
-Una sola página (`/`) con las noticias más recientes de https://www.cfna.org.ar/noticias/.
+API (Django REST Framework) que devuelve en JSON las noticias más recientes de https://www.cfna.org.ar/noticias/ (la primera página). Scrapea en cada petición; no guarda nada.
 
 ## Instalación
 
@@ -10,7 +10,28 @@ python manage.py migrate
 python manage.py runserver
 ```
 
-Abrir `http://127.0.0.1:8000/`. Cada vez que se carga la página se scrapea cfna.org.ar; si el sitio no responde, muestra las últimas noticias guardadas.
+## Endpoint
+
+`GET /api/v1/noticias/` — público, solo lectura.
+
+```json
+{
+  "count": 12,
+  "results": [
+    {
+      "id": 10685,
+      "titulo": "FORO PLA",
+      "url": "https://www.cfna.org.ar/foropla/",
+      "imagen_url": "https://...",
+      "resumen": "...",
+      "fecha": "2026-01-06",
+      "categorias": ["Noticias"]
+    }
+  ]
+}
+```
+
+Si cfna.org.ar no responde, devuelve `502` con `{"detail": "..."}`.
 
 ## Despliegue en Debian (gunicorn + nginx)
 
@@ -48,7 +69,7 @@ sudo nginx -t && sudo systemctl reload nginx
 sudo certbot --nginx -d api.midominio.com
 ```
 
-Verificación: `curl https://api.midominio.com/`, `systemctl status scrapcfna`, `journalctl -u scrapcfna -f`.
+Verificación: `curl https://api.midominio.com/api/v1/noticias/`, `systemctl status scrapcfna`, `journalctl -u scrapcfna -f`.
 
 Para actualizar: copiar el código, `pip install -r requirements.txt`, `migrate`, `collectstatic` y `sudo systemctl reload scrapcfna`.
 

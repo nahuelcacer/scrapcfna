@@ -6,8 +6,6 @@ import requests
 from bs4 import BeautifulSoup
 from django.conf import settings
 
-from .models import Noticia
-
 MESES = {
     "ene": 1, "jan": 1, "feb": 2, "mar": 3, "abr": 4, "apr": 4, "may": 5,
     "jun": 6, "jul": 7, "ago": 8, "aug": 8, "sep": 9, "set": 9, "oct": 10,
@@ -57,16 +55,3 @@ def fetch_pagina(numero):
     resp.raise_for_status()
     resp.encoding = "utf-8"
     return parse_articulos(resp.text)
-
-
-def guardar_noticias(items):
-    """Upsert de items parseados. Devuelve (creadas, actualizadas)."""
-    creadas = actualizadas = 0
-    for item in items:
-        _, created = Noticia.objects.update_or_create(
-            wp_id=item["wp_id"], defaults={k: v for k, v in item.items() if k != "wp_id"}
-        )
-        creadas += created
-        actualizadas += not created
-    return creadas, actualizadas
-
