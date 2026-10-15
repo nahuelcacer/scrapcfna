@@ -3,7 +3,7 @@ from unittest.mock import patch
 
 import requests
 from django.core.cache import cache
-from django.test import TestCase
+from django.test import TestCase, override_settings
 
 from noticias.services import parse_articulos, parse_fecha
 
@@ -32,7 +32,14 @@ class ParseTests(TestCase):
         self.assertEqual(item["fecha"], date(2026, 1, 6))
 
 
+LOCMEM = {"default": {"BACKEND": "django.core.cache.backends.locmem.LocMemCache"}}
+
+
+@override_settings(CACHES=LOCMEM)
 class ApiTests(TestCase):
+    def setUp(self):
+        cache.clear()
+
     @patch("noticias.views.fetch_pagina", side_effect=lambda n: parse_articulos(HTML))
     def test_devuelve_noticias_en_json(self, fetch):
         response = self.client.get("/api/v1/noticias/")
@@ -48,6 +55,7 @@ class ApiTests(TestCase):
         self.assertEqual(self.client.get("/api/v1/noticias/").status_code, 502)
 
 
+@override_settings(CACHES=LOCMEM)
 class LimiteTests(TestCase):
     def setUp(self):
         cache.clear()
