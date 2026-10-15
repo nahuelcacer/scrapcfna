@@ -5,9 +5,8 @@ from datetime import date
 import requests
 from bs4 import BeautifulSoup
 from django.conf import settings
-from django.utils import timezone
 
-from .models import Noticia, ScrapeRun
+from .models import Noticia
 
 MESES = {
     "ene": 1, "jan": 1, "feb": 2, "mar": 3, "abr": 4, "apr": 4, "may": 5,
@@ -71,30 +70,3 @@ def guardar_noticias(items):
         actualizadas += not created
     return creadas, actualizadas
 
-
-def scrapear_noticias(max_paginas=1):
-    """Scrapea hasta `max_paginas` y hace upsert. Devuelve (creadas, actualizadas)."""
-    creadas = actualizadas = 0
-    for pagina in range(1, max_paginas + 1):
-        items = fetch_pagina(pagina)
-        if not items:
-            break
-        c, a = guardar_noticias(items)
-        creadas += c
-        actualizadas += a
-    return creadas, actualizadas
-
-
-def ejecutar_scraping(paginas=1, origen=ScrapeRun.Origen.MANUAL):
-    """Corre el scraping y deja registro en ScrapeRun. Re-lanza errores de red."""
-    run = ScrapeRun.objects.create(paginas=paginas, origen=origen)
-    try:
-        run.creadas, run.actualizadas = scrapear_noticias(paginas)
-    except requests.RequestException as exc:
-        run.estado = ScrapeRun.Estado.ERROR
-        run.error = str(exc)
-        raise
-    finally:
-        run.fin = timezone.now()
-        run.save()
-    return run

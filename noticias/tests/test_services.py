@@ -1,12 +1,8 @@
 from datetime import date
-from unittest.mock import patch
-
 from django.test import TestCase
-from rest_framework import status
-from rest_framework.test import APIClient
 
 from noticias.models import Noticia
-from noticias.services import parse_articulos, parse_fecha, scrapear_noticias
+from noticias.services import guardar_noticias, parse_articulos, parse_fecha
 
 HTML = """
 <article id="post-10685" class="et_pb_post post-10685">
@@ -33,33 +29,9 @@ class ParseTests(TestCase):
         self.assertEqual(item["fecha"], date(2026, 1, 6))
 
 
-class ScrapeApiTests(TestCase):
-    def setUp(self):
-        self.client = APIClient()
-
-    @patch("noticias.services.fetch_pagina")
-    def test_scrape_es_idempotente(self, fetch):
-        fetch.side_effect = lambda n: parse_articulos(HTML) if n == 1 else []
-        self.assertEqual(scrapear_noticias(3), (1, 0))
-        self.assertEqual(scrapear_noticias(3), (0, 1))
+class GuardarTests(TestCase):
+    def test_guardar_es_idempotente(self):
+        items = parse_articulos(HTML)
+        self.assertEqual(guardar_noticias(items), (1, 0))
+        self.assertEqual(guardar_noticias(items), (0, 1))
         self.assertEqual(Noticia.objects.count(), 1)
-
-    def test_listado_es_publico(self):
-        self.assertEqual(self.client.get("/api/v1/noticias/").status_code, status.HTTP_200_OK)
-
-    def test_scrape_requiere_admin(self):
-        response = self.client.post("/api/v1/noticias/scrape/")
-        self.assertIn(response.status_code, (status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN))
-
-
-class PageThrottleTests(TestCase):
-    def setUp(self):
-        from django.core.cache import cache
-        cache.clear()
-
-    @patch("noticias.views.fetch_pagina", return_value=[])
-    def test_page_limita_a_10_por_minuto(self, _):
-        client = APIClient()
-        codes = [client.get("/api/v1/noticias/page/1").status_code for _ in range(11)]
-        self.assertEqual(codes[:10], [status.HTTP_404_NOT_FOUND] * 10)
-        self.assertEqual(codes[10], status.HTTP_429_TOO_MANY_REQUESTS)

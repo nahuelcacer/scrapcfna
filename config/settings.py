@@ -63,20 +63,17 @@ CSRF_TRUSTED_ORIGINS = env_list('DJANGO_CSRF_TRUSTED_ORIGINS')
 # Application definition
 
 INSTALLED_APPS = [
-    'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'rest_framework',
-    'django_filters',
     'noticias',
 ]
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
-    # Sirve los estáticos del admin (STATIC_ROOT) sin necesitar nginx.
+    # Sirve los estáticos (STATIC_ROOT) sin necesitar nginx.
     'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -152,25 +149,15 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
 STATIC_URL = 'static/'
-# `collectstatic` deja acá los estáticos del admin para que los sirva nginx.
+# `collectstatic` deja acá los estáticos para que los sirva nginx.
 STATIC_ROOT = os.environ.get('DJANGO_STATIC_ROOT', BASE_DIR / 'staticfiles')
-
-# Cache: los contadores del throttling deben compartirse entre los workers de
-# gunicorn. Con DJANGO_CACHE_DIR se usa un cache en archivos; sin él, memoria local.
-if os.environ.get('DJANGO_CACHE_DIR'):
-    CACHES = {
-        'default': {
-            'BACKEND': 'django.core.cache.backends.filebased.FileBasedCache',
-            'LOCATION': os.environ['DJANGO_CACHE_DIR'],
-        }
-    }
 
 # Seguridad (solo con DEBUG apagado). Se asume nginx delante terminando TLS y
 # enviando X-Forwarded-Proto.
 if not DEBUG:
     SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
     # DJANGO_SSL_REDIRECT=0 permite servir por http (p. ej. solo con IP, sin certificado);
-    # en ese caso las cookies tampoco pueden ser "secure" o el login del admin no funciona.
+    # en ese caso las cookies tampoco pueden ser "secure".
     SECURE_SSL_REDIRECT = env_bool('DJANGO_SSL_REDIRECT', True)
     SESSION_COOKIE_SECURE = SECURE_SSL_REDIRECT
     CSRF_COOKIE_SECURE = SECURE_SSL_REDIRECT
@@ -196,27 +183,5 @@ LOGGING = {
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-
-REST_FRAMEWORK = {
-    "DEFAULT_AUTHENTICATION_CLASSES": [
-        "rest_framework.authentication.SessionAuthentication",
-    ],
-    "DEFAULT_PERMISSION_CLASSES": [
-        "rest_framework.permissions.IsAdminUser",
-    ],
-    "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
-    "PAGE_SIZE": 20,
-    "DEFAULT_FILTER_BACKENDS": [
-        "django_filters.rest_framework.DjangoFilterBackend",
-        "rest_framework.filters.SearchFilter",
-        "rest_framework.filters.OrderingFilter",
-    ],
-    "DEFAULT_THROTTLE_RATES": {
-        "scrape_page": "10/min",
-    },
-    "DEFAULT_RENDERER_CLASSES": [
-        "rest_framework.renderers.JSONRenderer",
-    ],
-}
 
 CFNA_NOTICIAS_URL = "https://www.cfna.org.ar/noticias/"
