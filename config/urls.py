@@ -13,13 +13,14 @@ Class-based views
 Including another URLconf
     1. Import the include() function: from django.urls import include, path
 
-from noticias.pagina import inicio
+from noticias.pagina import inicio, noticias_json
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 from django.urls import path
 
-from noticias.pagina import inicio
+from noticias.pagina import inicio, noticias_json
 
 urlpatterns = [
     path('', inicio, name='inicio'),
+    path('noticias.json', noticias_json, name='noticias-json'),
 ]

@@ -1,4 +1,7 @@
 from datetime import date
+from unittest.mock import patch
+
+import requests
 from django.test import TestCase
 
 from noticias.models import Noticia
@@ -35,3 +38,20 @@ class GuardarTests(TestCase):
         self.assertEqual(guardar_noticias(items), (1, 0))
         self.assertEqual(guardar_noticias(items), (0, 1))
         self.assertEqual(Noticia.objects.count(), 1)
+
+
+class JsonTests(TestCase):
+    @patch("noticias.pagina.fetch_pagina", side_effect=lambda n: parse_articulos(HTML))
+    def test_json_devuelve_noticias(self, _):
+        data = self.client.get("/noticias.json").json()
+        self.assertTrue(data["actualizado"])
+        self.assertEqual(data["count"], 1)
+        self.assertEqual(data["results"][0]["titulo"], "FORO PLA")
+        self.assertEqual(data["results"][0]["fecha"], "2026-01-06")
+
+    @patch("noticias.pagina.fetch_pagina", side_effect=requests.ConnectionError())
+    def test_json_usa_guardadas_si_falla(self, _):
+        guardar_noticias(parse_articulos(HTML))
+        data = self.client.get("/noticias.json").json()
+        self.assertFalse(data["actualizado"])
+        self.assertEqual(data["count"], 1)
