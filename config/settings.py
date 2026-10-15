@@ -211,4 +211,7 @@ CACHES = {
     }
 }
 
+# Cuánto tiempo se reutiliza el scraping antes de volver a consultar cfna.org.ar.
+NOTICIAS_CACHE_SEGUNDOS = int(os.environ.get("DJANGO_NOTICIAS_CACHE_SEGUNDOS", 300))
+
 CFNA_NOTICIAS_URL = "https://www.cfna.org.ar/noticias/"

@@ -54,6 +54,21 @@ class ApiTests(TestCase):
     def test_502_si_falla_el_scraping(self, _):
         self.assertEqual(self.client.get("/api/v1/noticias/").status_code, 502)
 
+    @patch("noticias.views.fetch_pagina", side_effect=lambda n: parse_articulos(HTML))
+    def test_cachea_el_scraping(self, fetch):
+        self.client.get("/api/v1/noticias/")
+        self.client.get("/api/v1/noticias/")
+        fetch.assert_called_once_with(1)
+
+    def test_usa_la_ultima_copia_si_el_sitio_falla(self):
+        with patch("noticias.views.fetch_pagina", side_effect=lambda n: parse_articulos(HTML)):
+            self.client.get("/api/v1/noticias/")
+        cache.delete("noticias:recientes")  # simula que venció el caché
+        with patch("noticias.views.fetch_pagina", side_effect=requests.ConnectionError()):
+            response = self.client.get("/api/v1/noticias/")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["count"], 1)
+
 
 @override_settings(CACHES=LOCMEM)
 class LimiteTests(TestCase):
