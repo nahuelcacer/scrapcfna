@@ -59,6 +59,12 @@ if DEBUG and not ALLOWED_HOSTS:
 # Orígenes https permitidos para POST con CSRF, p. ej. https://api.midominio.com
 CSRF_TRUSTED_ORIGINS = env_list('DJANGO_CSRF_TRUSTED_ORIGINS')
 
+# Railway define el dominio público del servicio; se agrega solo.
+RAILWAY_PUBLIC_DOMAIN = os.environ.get('RAILWAY_PUBLIC_DOMAIN', '')
+if RAILWAY_PUBLIC_DOMAIN:
+    ALLOWED_HOSTS.append(RAILWAY_PUBLIC_DOMAIN)
+    CSRF_TRUSTED_ORIGINS.append(f'https://{RAILWAY_PUBLIC_DOMAIN}')
+
 
 # Application definition
 
@@ -193,6 +199,8 @@ REST_FRAMEWORK = {
     # Límite por IP: cada petición scrapea cfna.org.ar.
     "DEFAULT_THROTTLE_CLASSES": ["rest_framework.throttling.AnonRateThrottle"],
     "DEFAULT_THROTTLE_RATES": {"anon": "30/min"},
+    # Cantidad de proxies delante de la app (Railway: 1) para tomar la IP real del cliente.
+    "NUM_PROXIES": int(os.environ['DJANGO_NUM_PROXIES']) if os.environ.get('DJANGO_NUM_PROXIES') else None,
 }
 
 # Los contadores del límite se comparten entre los workers de gunicorn (cache en archivos).
