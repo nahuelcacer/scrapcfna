@@ -2,6 +2,7 @@ from datetime import date
 from unittest.mock import patch
 
 import requests
+from django.core.cache import cache
 from django.test import TestCase
 
 from noticias.services import parse_articulos, parse_fecha
@@ -45,3 +46,14 @@ class ApiTests(TestCase):
     @patch("noticias.views.fetch_pagina", side_effect=requests.ConnectionError())
     def test_502_si_falla_el_scraping(self, _):
         self.assertEqual(self.client.get("/api/v1/noticias/").status_code, 502)
+
+
+class LimiteTests(TestCase):
+    def setUp(self):
+        cache.clear()
+
+    @patch("noticias.views.fetch_pagina", return_value=[])
+    def test_limita_a_30_por_minuto(self, _):
+        codes = [self.client.get("/api/v1/noticias/").status_code for _ in range(31)]
+        self.assertEqual(codes[:30], [200] * 30)
+        self.assertEqual(codes[30], 429)

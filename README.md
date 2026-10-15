@@ -33,6 +33,8 @@ python manage.py runserver
 
 Si cfna.org.ar no responde, devuelve `502` con `{"detail": "..."}`.
 
+Límite: 30 peticiones por minuto por IP (`429` al superarlo). Se ajusta en `REST_FRAMEWORK["DEFAULT_THROTTLE_RATES"]` de `config/settings.py`. Los contadores se guardan en `cache/` (o en `DJANGO_CACHE_DIR`), compartidos entre workers.
+
 ## Despliegue en Debian (gunicorn + nginx)
 
 Archivos en `deploy/`: `systemd/scrapcfna.service` (gunicorn) y `nginx/scrapcfna.conf`. Asumen el proyecto en `/opt/scrapcfna`, el virtualenv en `/opt/scrapcfna/venv` y un usuario de sistema `scrapcfna`; reemplazá `api.midominio.com` por tu dominio.

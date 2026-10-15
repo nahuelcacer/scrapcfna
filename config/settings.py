@@ -190,6 +190,17 @@ REST_FRAMEWORK = {
     "DEFAULT_PERMISSION_CLASSES": ["rest_framework.permissions.AllowAny"],
     "DEFAULT_RENDERER_CLASSES": ["rest_framework.renderers.JSONRenderer"],
     "UNAUTHENTICATED_USER": None,
+    # Límite por IP: cada petición scrapea cfna.org.ar.
+    "DEFAULT_THROTTLE_CLASSES": ["rest_framework.throttling.AnonRateThrottle"],
+    "DEFAULT_THROTTLE_RATES": {"anon": "30/min"},
+}
+
+# Los contadores del límite se comparten entre los workers de gunicorn (cache en archivos).
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.filebased.FileBasedCache",
+        "LOCATION": os.environ.get("DJANGO_CACHE_DIR", BASE_DIR / "cache"),
+    }
 }
 
 CFNA_NOTICIAS_URL = "https://www.cfna.org.ar/noticias/"
