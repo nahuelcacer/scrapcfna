@@ -1,3 +1,4 @@
+import os
 from datetime import date
 from unittest.mock import patch
 
@@ -96,3 +97,20 @@ class VerifySslTests(TestCase):
     @override_settings(SCRAPE_VERIFY_SSL=False)
     def test_puede_desactivar_la_verificacion(self):
         self.assertIs(self._fetch(), False)
+
+
+class EnvBoolTests(TestCase):
+    def test_interpreta_la_variable_de_verificacion_ssl(self):
+        from config.settings import env_bool
+
+        casos = {"0": False, "false": False, "no": False, "1": True, "true": True}
+        for valor, esperado in casos.items():
+            with patch.dict(os.environ, {"DJANGO_SCRAPE_VERIFY_SSL": valor}):
+                self.assertIs(env_bool("DJANGO_SCRAPE_VERIFY_SSL", True), esperado, valor)
+
+    def test_sin_variable_verifica_por_defecto(self):
+        from config.settings import env_bool
+
+        with patch.dict(os.environ, {}, clear=False):
+            os.environ.pop("DJANGO_SCRAPE_VERIFY_SSL", None)
+            self.assertIs(env_bool("DJANGO_SCRAPE_VERIFY_SSL", True), True)
