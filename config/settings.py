@@ -219,3 +219,6 @@ CFNA_NOTICIAS_URL = "https://www.cfna.org.ar/noticias/"
 # Verificar el certificado TLS de cfna.org.ar. Poner DJANGO_SCRAPE_VERIFY_SSL=0 solo como
 # parche temporal si el sitio tiene el certificado vencido o inválido.
 SCRAPE_VERIFY_SSL = env_bool("DJANGO_SCRAPE_VERIFY_SSL", True)
+# Si la verificación falla por el certificado, reintentar sin verificar (y volver a verificar
+# solo cuando el sitio lo renueve). Poner DJANGO_SCRAPE_SSL_FALLBACK=0 para desactivarlo.
+SCRAPE_SSL_FALLBACK = env_bool("DJANGO_SCRAPE_SSL_FALLBACK", True)

@@ -114,3 +114,32 @@ class EnvBoolTests(TestCase):
         with patch.dict(os.environ, {}, clear=False):
             os.environ.pop("DJANGO_SCRAPE_VERIFY_SSL", None)
             self.assertIs(env_bool("DJANGO_SCRAPE_VERIFY_SSL", True), True)
+
+
+class SslFallbackTests(TestCase):
+    def _fetch(self, side_effect):
+        with patch("noticias.services.requests.get", side_effect=side_effect) as get:
+            try:
+                fetch_pagina(1)
+            except requests.exceptions.SSLError:
+                pass
+        return [c.kwargs["verify"] for c in get.call_args_list]
+
+    def _ok(self):
+        r = type("R", (), {"status_code": 200, "text": HTML, "raise_for_status": lambda self: None})()
+        return r
+
+    def test_reintenta_sin_verificar_si_el_certificado_falla(self):
+        verifs = self._fetch([requests.exceptions.SSLError(), self._ok()])
+        self.assertEqual(verifs, [True, False])
+
+    def test_si_el_certificado_es_valido_no_reintenta(self):
+        self.assertEqual(self._fetch([self._ok()]), [True])
+
+    @override_settings(SCRAPE_SSL_FALLBACK=False)
+    def test_sin_fallback_propaga_el_error(self):
+        self.assertEqual(self._fetch([requests.exceptions.SSLError()]), [True])
+
+    @override_settings(SCRAPE_VERIFY_SSL=False)
+    def test_con_verificacion_forzada_apagada_no_reintenta(self):
+        self.assertEqual(self._fetch([self._ok()]), [False])

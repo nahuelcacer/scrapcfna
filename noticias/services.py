@@ -1,10 +1,15 @@
 """Scraping de https://www.cfna.org.ar/noticias/ (WordPress + Divi)."""
+import logging
 import re
+import warnings
 from datetime import date
 
 import requests
 from bs4 import BeautifulSoup
 from django.conf import settings
+from urllib3.exceptions import InsecureRequestWarning
+
+logger = logging.getLogger(__name__)
 
 MESES = {
     "ene": 1, "jan": 1, "feb": 2, "mar": 3, "abr": 4, "apr": 4, "may": 5,
@@ -46,10 +51,28 @@ def parse_articulos(html):
     return items
 
 
+def _get(url):
+    """GET verificando TLS; si el certificado del sitio es inválido, reintenta sin verificar.
+
+    Así el scraping sigue andando con el certificado vencido y vuelve solo a verificar
+    cuando lo renueven. DJANGO_SCRAPE_VERIFY_SSL=0 fuerza el modo sin verificación y
+    DJANGO_SCRAPE_SSL_FALLBACK=0 desactiva el reintento.
+    """
+    try:
+        return requests.get(url, headers=HEADERS, timeout=TIMEOUT, verify=settings.SCRAPE_VERIFY_SSL)
+    except requests.exceptions.SSLError:
+        if not (settings.SCRAPE_VERIFY_SSL and settings.SCRAPE_SSL_FALLBACK):
+            raise
+        logger.warning("Certificado TLS inválido en %s; se reintenta sin verificarlo.", url)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", InsecureRequestWarning)
+            return requests.get(url, headers=HEADERS, timeout=TIMEOUT, verify=False)
+
+
 def fetch_pagina(numero):
     base = settings.CFNA_NOTICIAS_URL.rstrip("/")
     url = f"{base}/page/{numero}/?et_blog"
-    resp = requests.get(url, headers=HEADERS, timeout=TIMEOUT, verify=settings.SCRAPE_VERIFY_SSL)
+    resp = _get(url)
     if resp.status_code == 404:
         return []
     resp.raise_for_status()
