@@ -5,7 +5,7 @@ import requests
 from django.core.cache import cache
 from django.test import TestCase, override_settings
 
-from noticias.services import parse_articulos, parse_fecha
+from noticias.services import fetch_pagina, parse_articulos, parse_fecha
 
 HTML = """
 <article id="post-10685" class="et_pb_post post-10685">
@@ -80,3 +80,19 @@ class LimiteTests(TestCase):
         codes = [self.client.get("/api/v1/noticias/").status_code for _ in range(31)]
         self.assertEqual(codes[:30], [200] * 30)
         self.assertEqual(codes[30], 429)
+
+
+class VerifySslTests(TestCase):
+    def _fetch(self):
+        with patch("noticias.services.requests.get") as get:
+            get.return_value.status_code = 200
+            get.return_value.text = HTML
+            fetch_pagina(1)
+        return get.call_args.kwargs["verify"]
+
+    def test_verifica_ssl_por_defecto(self):
+        self.assertIs(self._fetch(), True)
+
+    @override_settings(SCRAPE_VERIFY_SSL=False)
+    def test_puede_desactivar_la_verificacion(self):
+        self.assertIs(self._fetch(), False)

@@ -215,3 +215,7 @@ CACHES = {
 NOTICIAS_CACHE_SEGUNDOS = int(os.environ.get("DJANGO_NOTICIAS_CACHE_SEGUNDOS", 4 * 60 * 60))
 
 CFNA_NOTICIAS_URL = "https://www.cfna.org.ar/noticias/"
+
+# Verificar el certificado TLS de cfna.org.ar. Poner DJANGO_SCRAPE_VERIFY_SSL=0 solo como
+# parche temporal si el sitio tiene el certificado vencido o inválido.
+SCRAPE_VERIFY_SSL = env_bool("DJANGO_SCRAPE_VERIFY_SSL", True)

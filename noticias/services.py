@@ -49,7 +49,7 @@ def parse_articulos(html):
 def fetch_pagina(numero):
     base = settings.CFNA_NOTICIAS_URL.rstrip("/")
     url = f"{base}/page/{numero}/?et_blog"
-    resp = requests.get(url, headers=HEADERS, timeout=TIMEOUT)
+    resp = requests.get(url, headers=HEADERS, timeout=TIMEOUT, verify=settings.SCRAPE_VERIFY_SSL)
     if resp.status_code == 404:
         return []
     resp.raise_for_status()
